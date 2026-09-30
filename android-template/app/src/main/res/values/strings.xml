@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- `__APP_NAME__` is rewritten by scripts/inject-assets.mjs (blueprint §9.5). -->
+<resources>
+    <string name="app_name">__APP_NAME__</string>
+</resources>

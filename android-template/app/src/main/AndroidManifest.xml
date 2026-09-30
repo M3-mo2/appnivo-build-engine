@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Managed by the build engine. `__APP_NAME__` / `__CLEARTEXT__` are rewritten by
+  scripts/inject-assets.mjs; the runtime Activity keeps its own stable package so
+  the user's applicationId can vary freely (blueprint §9.5).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:label="__APP_NAME__"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="__CLEARTEXT__"
+        android:theme="@style/Theme.AppNivo">
+
+        <activity
+            android:name="com.appnivo.runtime.MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

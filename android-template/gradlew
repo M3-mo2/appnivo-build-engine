@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# Self-bootstrapping Gradle launcher for the AppNivo build-engine template.
+#
+# The template intentionally does not commit the binary `gradle-wrapper.jar`
+# (it cannot be hand-authored). Resolution order:
+#   1. use the standard wrapper jar when the provisioned repo has one;
+#   2. otherwise use a `gradle` already on PATH;
+#   3. otherwise download the distribution declared in
+#      `gradle/wrapper/gradle-wrapper.properties` into the Gradle user home.
+#
+# Usage is identical to the standard `gradlew`, e.g.
+#   ./android-template/gradlew -p android-template assembleRelease
+set -euo pipefail
+
+APP_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WRAPPER_JAR="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+PROPS="$APP_HOME/gradle/wrapper/gradle-wrapper.properties"
+
+if [ -f "$WRAPPER_JAR" ]; then
+  exec java -classpath "$WRAPPER_JAR" org.gradle.wrapper.GradleWrapperMain "$@"
+fi
+
+if command -v gradle >/dev/null 2>&1; then
+  exec gradle "$@"
+fi
+
+if [ ! -f "$PROPS" ]; then
+  echo "gradlew: missing $PROPS" >&2
+  exit 1
+fi
+
+# Properties files escape ':' as '\:' — strip the escapes before use.
+DIST_URL="$(grep -E '^distributionUrl=' "$PROPS" | head -n1 | cut -d= -f2- | tr -d '\\')"
+if [ -z "$DIST_URL" ]; then
+  echo "gradlew: could not read distributionUrl from $PROPS" >&2
+  exit 1
+fi
+
+VERSION="$(basename "$DIST_URL" | sed -E 's/^gradle-([0-9.]+)-.*$/\1/')"
+if [ -z "$VERSION" ] || [ "$VERSION" = "$(basename "$DIST_URL")" ]; then
+  echo "gradlew: could not derive a Gradle version from $DIST_URL" >&2
+  exit 1
+fi
+
+GRADLE_HOME_BASE="${GRADLE_USER_HOME:-$HOME/.gradle}"
+DEST="$GRADLE_HOME_BASE/wrapper/dists/appnivo-gradle-$VERSION"
+GRADLE_BIN="$DEST/gradle-$VERSION/bin/gradle"
+
+if [ ! -x "$GRADLE_BIN" ]; then
+  echo "gradlew: downloading Gradle $VERSION from $DIST_URL"
+  mkdir -p "$DEST"
+  curl -fsSL --retry 3 --retry-delay 2 "$DIST_URL" -o "$DEST/gradle.zip"
+  (cd "$DEST" && unzip -q -o gradle.zip && rm -f gradle.zip)
+fi
+
+if [ ! -x "$GRADLE_BIN" ]; then
+  echo "gradlew: Gradle failed to materialize at $GRADLE_BIN" >&2
+  exit 1
+fi
+
+exec "$GRADLE_BIN" "$@"
